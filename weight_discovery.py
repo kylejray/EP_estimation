@@ -90,8 +90,11 @@ def gaussian_basis_mu_vector(process, index, num_estimators, gamma, **kwargs ):
     return mu
 
 
-def get_step_epr(process, index, dt, gamma, num_est, **kwargs):
+def get_step_epr(process, index, dt, gamma, num_est, return_mats = False, **kwargs):
     mu = gaussian_basis_mu_vector(process, index, num_est, gamma, **kwargs)
     Xi = gaussian_basis_Xi_matrix(process, index, num_est, dt)
     ep = mu@np.linalg.inv(Xi)@mu
+    if return_mats:
+        return mu, Xi
     return ep/dt
+
