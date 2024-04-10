@@ -11,6 +11,7 @@ def one_step_stats(process, time_step):
     mins = np.min(data, axis=(0,1))
     stds = np.std(data[:,0,:], axis=(0))
     lowers, uppers = mins - stds, maxs + stds
+    #lowers, uppers = mins, maxs
 
     return [lowers, uppers]
 

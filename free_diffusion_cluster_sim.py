@@ -55,6 +55,7 @@ print('ending collection')
 sys.stdout.flush()
 if rank == 0:
     
+
     data = d.reshape(-1,*d.shape[2:])
 
     output = {'data':data}
