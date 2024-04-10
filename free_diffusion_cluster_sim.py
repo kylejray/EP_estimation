@@ -18,14 +18,14 @@ params['init'] = init_params
 T = .25# Total time
 dt = 0.001
 num_steps = int(T / dt)
-num_paths = 1_000_000
+num_paths = 2_000_000
 
 sim_params = [num_paths, num_steps, dt]
 params['sim'] = sim_params
 
 skip=1
-num_iter = 1200
-num_ests = [4, 6, 8, 10]
+num_iter = 540
+num_ests = [6, 9, 12]
 steps = [ int(5*i) for i in  [1, 2, 4.2, 10, 15, 20, 25, 35, 47]]
 
 batch_size = int(num_iter/size)
@@ -47,8 +47,12 @@ for i in range(batch_size):
     all_estimates.append(estimates)
 
 comm.Barrier()
-
+print('starting collection')
+sys.stdout.flush()
 d = np.array(comm.gather(all_estimates))
+
+print('ending collection')
+sys.stdout.flush()
 if rank == 0:
     
     data = d.reshape(-1,*d.shape[2:])
