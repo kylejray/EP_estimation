@@ -46,10 +46,13 @@ for i in range(batch_size):
         sys.stdout.flush()
     all_estimates.append(estimates)
 
-comm.barrier()
-d = np.array(comm.gather(all_estimates))
+comm.Barrier()
+
+d = np.array(comm.gather(all_estimates, root=0))
+
 
 if rank == 0:
+
     data = d.reshape(-1,*d.shape[2:])
 
     output = {'data':data}
