@@ -22,12 +22,15 @@ skip=1
 calc_params = {}
 
 
-num_paths_list = [25_000]
-num_ests = [[6, 6, 6], [6,6,8], [8,6,6], [6,8,6]]
+num_paths_list = [10_000]
+num_ests = [[6,6,6], [8,6,6], [10,8,6]]
 
 
-num_iter = 5
+num_iter = 10
 batch_size = int(num_iter/size)
+
+
+max_size = 2
 
 for num_paths in num_paths_list:
     sim_params = [num_paths, num_steps, dt]
@@ -42,13 +45,42 @@ for num_paths in num_paths_list:
         Xis = []
         mus = []
         print(f'rank {rank} run starting {num_est} estimators')
+        sys.stdout.flush()
         for i in range(batch_size):
             process = simulate_free_diffusion_underdamped(params, save_skip=skip)
+
+            print(f'rank {rank} got process for run {i} ')
+            sys.stdout.flush()
+
+            if max_size is not None:
+                total_gbytes = np.prod(process.shape[:-1])*np.prod(num_est)*8/(10**9)
+                n_chunks = ceil(total_gbytes / max_size)
+                max_steps = ceil(process.shape[0]/n_chunks)
+                k_params = get_kernel_params(process, num_est)
+                
+                mu = np.zeros(np.prod(num_est))
+                Xi = np.zeros((np.prod(num_est),np.prod(num_est)))
+                j=0
+                while j < process.shape[0]:
+                    print(f'rank {rank} calculating trials [{j}:{j+max_steps}]')
+                    sys.stdout.flush()
+                    proc = process[j:j+max_steps]
+                    mu_temp, Xi_temp = get_ep(proc, calc_params, num_est, return_mats=True, kernel_params=k_params)
+                    mu += mu_temp*proc.shape[0]/process.shape[0]
+                    Xi += Xi_temp*proc.shape[0]/process.shape[0]
+                    j += max_steps
             
-            mu, Xi = get_ep(process, calc_params, num_est, return_mats=True)
+
+            else:
+                mu, Xi = get_ep(process, calc_params, num_est, return_mats=True)
+
+            print(f'rank {rank} got matrices for run {i} ')
+            sys.stdout.flush()
+
             estimates.append(mu@np.linalg.inv(Xi)@mu)
             Xis.append(Xi)
             mus.append(mu)
+            
             print(f'rank{rank} finished {i} run of {num_est} estimators')
             sys.stdout.flush()
 
