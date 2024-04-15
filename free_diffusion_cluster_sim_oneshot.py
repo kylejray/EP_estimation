@@ -16,28 +16,31 @@ init_params = [.2,.3,.025]
 params['init'] = init_params
 
 T = .25# Total time
-dt = 0.0025
+dt = 0.001
 num_steps = int(T / dt)
-skip=1
+skip = 10
+
 calc_params = {}
 
 
-num_paths_list = [10_000]
+num_paths_list = [20_000]
 num_ests = [[6,6,6], [8,6,6], [10,8,6]]
 
 
-num_iter = 10
+num_iter = 2
 batch_size = int(num_iter/size)
 
 
-max_size = 2
+max_size = 3
 
 for num_paths in num_paths_list:
     sim_params = [num_paths, num_steps, dt]
+    proc_params = [num_paths, num_steps, skip*dt]
+
     params['sim'] = sim_params
 
     calc_params.update(params)
-    calc_params['sim'][2] = dt*skip
+    calc_params['sim'] = proc_params
 
     for num_est in num_ests:
 
