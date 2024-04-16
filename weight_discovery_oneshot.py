@@ -20,7 +20,7 @@ def get_kernel_params(process, num_estimators, padding=2):
     means = [np.linspace(l-w, u+w, n) for l,u,w,n in zip(lowers, uppers, bin_widths, num_estimators[:-1])]
 
     bin_widths.append(process.shape[1] / (num_estimators[-1]-padding))
-    means.append(np.linspace(0-bin_widths[-1], process.shape[1]+bin_widths[-1], num_estimators[-1]))
+    means.append(np.linspace(0-bin_widths[-1]/padding, process.shape[1]+bin_widths[-1]/padding, num_estimators[-1]))
 
     return [means, bin_widths]
 
