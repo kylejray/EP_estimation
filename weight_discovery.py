@@ -16,8 +16,7 @@ def one_step_stats(process, time_step):
     return [lowers, uppers]
 
 # turn the measurements into bin centers and std dev
-def get_kernel_params(process, time_step, num_estimators, padding=2):
-
+def get_kernel_params(process, time_step, num_estimators, padding=2, **kwargs):
     lowers, uppers = one_step_stats(process, time_step)
     # The region we want to cover [x_lower, x_upper]*[p_lower, p_upper]
     std_devs = (uppers-lowers)/(num_estimators-padding)
@@ -26,8 +25,11 @@ def get_kernel_params(process, time_step, num_estimators, padding=2):
 
 #return the an array that has all basis func evaluated at all data points at the time step
 # shape will be [num_paths, num_estimators, num_estimators]
-def gaussian_basis_function(process, time_step, num_estimators):
-    means, std_devs = get_kernel_params(process, time_step, num_estimators)
+def gaussian_basis_function(process, time_step, num_estimators, kernel_params=None, **kwargs):
+    if kernel_params is None:
+        means, std_devs = get_kernel_params(process, time_step, num_estimators, **kwargs)
+    else:
+        means, std_devs = kernel_params
 
     mean_x, mean_p = np.meshgrid(*means.T)
     std_dev_x, std_dev_p = std_devs
@@ -39,15 +41,20 @@ def gaussian_basis_function(process, time_step, num_estimators):
     return(kernel_value)
 
 #
-def gaussian_basis_irr_current_average(process, index, num_estimators, gamma, cyclic_lims=None):
+def gaussian_basis_mu_vector(process, index, num_estimators, gamma, kernels=None, cyclic_lims=None, **kwargs):
+    
     # Initialize the current value
     current = 0
 
     # Iterate for each time step and each path
     for time in range(index, index+1):
+        if kernels is None:
+            w = kernels[0]
+            dw = kernels[0] - w
         # Compute dx, dw, w and dp for the step for all paths at once
-        w = gaussian_basis_function(process, time, num_estimators)
-        dw = gaussian_basis_function(process, time+1, num_estimators)- w
+        else:
+            w = gaussian_basis_function(process, time, num_estimators, **kwargs)
+            dw = gaussian_basis_function(process, time+1, num_estimators, **kwargs)- w
 
         step_diff = np.diff(data_t_tplus(process, time), axis=1).squeeze()
 
@@ -64,10 +71,12 @@ def gaussian_basis_irr_current_average(process, index, num_estimators, gamma, cy
         current += gamma *  w * dx[:,None,None] - 1/2 * dw * dp[:,None,None]
     #average over num_paths
     current_average = current.mean(axis=0)
-    return current_average
+    return current_average.reshape(-1)
 
 #
-def gaussian_basis_Xi_matrix(process, index, num_estimators, dt):
+def gaussian_basis_Xi_matrix(process, index, num_estimators, dt, kernel_value=None, **kwargs):
+    if kernel_value is None:
+        kernel_value = gaussian_basis_function(process, index, num_estimators, **kwargs)
     # Initialize Xi matrix
     Xi_matrix = np.zeros((num_estimators**2,num_estimators**2))
 
@@ -75,25 +84,22 @@ def gaussian_basis_Xi_matrix(process, index, num_estimators, dt):
     # could be optimized since we know its symmetric, but I didnt bother
     N = process.shape[0]
 
-    basis_vector = gaussian_basis_function(process, index, num_estimators)
-    basis_vector = basis_vector.reshape(basis_vector.shape[0],-1)
+    basis_vector = kernel_value.reshape(kernel_value.shape[0],-1)
 
     Xi_matrix += dt * np.einsum('ij,ik->jk', basis_vector, basis_vector)
 
     # average over paths
     return Xi_matrix / N
 
-def gaussian_basis_mu_vector(process, index, num_estimators, gamma, **kwargs ):
-    # Initialize mu vector
-    mu = np.zeros(num_estimators**2)
-    # all we do is reshape the average so its a vecotr instead of a square matrix
-    mu += gaussian_basis_irr_current_average(process, index, num_estimators, gamma, **kwargs).reshape(-1)
-    return mu
 
 
-def get_step_epr(process, index, dt, gamma, num_est, return_mats = False, **kwargs):
-    mu = gaussian_basis_mu_vector(process, index, num_est, gamma, **kwargs)
-    Xi = gaussian_basis_Xi_matrix(process, index, num_est, dt)
+def get_step_epr(process, index, dt, gamma, num_est, return_mats = False, kernel_params=None, **kwargs):
+
+    kernel = gaussian_basis_function(process, index, num_est, kernel_params= kernel_params, **kwargs)
+    next_kernel = gaussian_basis_function(process, index+1, num_est, kernel_params= kernel_params, **kwargs)
+
+    mu = gaussian_basis_mu_vector(process, index, num_est, gamma, kernels=[kernel, next_kernel], **kwargs)
+    Xi = gaussian_basis_Xi_matrix(process, index, num_est, dt, kernel_value=kernel, **kwargs)
     
     if return_mats:
         return mu, Xi
