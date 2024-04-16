@@ -9,16 +9,17 @@ def process_stats(process):
     #stds = np.std(data[:,0,:], axis=(0))
     lowers, uppers = mins, maxs
 
+
+
     return [lowers, uppers]
 
-def get_kernel_params(process, num_estimators):
+def get_kernel_params(process, num_estimators, padding=2):
     num_estimators = np.array(num_estimators)
     lowers, uppers = process_stats(process)
-    # The region we want to cover [x_lower, x_upper]*[p_lower, p_upper]
-    bin_widths = list((uppers-lowers)/(num_estimators[:-1]-2))
+    bin_widths = list((uppers-lowers)/(num_estimators[:-1]-padding))
     means = [np.linspace(l-w, u+w, n) for l,u,w,n in zip(lowers, uppers, bin_widths, num_estimators[:-1])]
 
-    bin_widths.append(process.shape[1] / (num_estimators[-1]-2))
+    bin_widths.append(process.shape[1] / (num_estimators[-1]-padding))
     means.append(np.linspace(0-bin_widths[-1], process.shape[1]+bin_widths[-1], num_estimators[-1]))
 
     return [means, bin_widths]

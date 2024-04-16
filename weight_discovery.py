@@ -16,12 +16,12 @@ def one_step_stats(process, time_step):
     return [lowers, uppers]
 
 # turn the measurements into bin centers and std dev
-def get_kernel_params(process, time_step, num_estimators):
+def get_kernel_params(process, time_step, num_estimators, padding=2):
 
     lowers, uppers = one_step_stats(process, time_step)
     # The region we want to cover [x_lower, x_upper]*[p_lower, p_upper]
-    std_devs = (uppers-lowers)/(num_estimators-2)
-    means = np.linspace(lowers-std_devs/2, uppers+std_devs/2, num_estimators)
+    std_devs = (uppers-lowers)/(num_estimators-padding)
+    means = np.linspace(lowers-std_devs/padding, uppers+std_devs/padding, num_estimators)
     return means, std_devs
 
 #return the an array that has all basis func evaluated at all data points at the time step
