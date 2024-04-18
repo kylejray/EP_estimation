@@ -10,32 +10,33 @@ from kyle_tools import save_as_json
 import numpy as np
 from weight_discovery_oneshot import *
 from free_diffusion import *
+from oneshot_running_parameters import run_params as rp
 
 
-init_params = [.2,.3,.025]
+init_params = rp['init_params']
 params['init'] = init_params
 
-T = .25# Total time
-dt = 0.001
-num_steps = int(T / dt)
-skip = 10
+#kwargs = {'cyclic_lims':None, 'padding':-2}
+
+T = rp['T'] # Total time
+dt = rp['dt']
+num_steps = rp['num_steps']
+skip = rp['skip']
 
 calc_params = {}
 
+num_paths_list = rp['num_paths_list']
+num_ests = rp['num_ests']
 
-num_paths_list = [20_000]
-num_ests = [[6,6,6], [8,6,6], [10,8,6]]
+num_iter = rp['num_iter']
+max_size = rp['max_size']
 
 
-num_iter = 2
 batch_size = int(num_iter/size)
-
-
-max_size = 3
 
 for num_paths in num_paths_list:
     sim_params = [num_paths, num_steps, dt]
-    proc_params = [num_paths, num_steps, skip*dt]
+    proc_params = [num_paths, int(num_steps/skip), skip*dt]
 
     params['sim'] = sim_params
 
