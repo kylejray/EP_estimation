@@ -14,14 +14,14 @@ run_params['num_steps'] = int(T / dt) #nsteps for simulation
 
 run_params['skip'] = 1 #skip_steps when saving sim output
 
-run_params['num_paths_list'] = [50_000]
+run_params['num_paths_list'] = [10_000]
 #run_params['num_paths_list'] = [10_000, 25_000, 50_000, 100_000, 250_000]
 
 #run_params['num_ests'] = [[6,6,6], [8,6,6], [6,8,6], [8,8,6], [9,8,6], [10,8,6], [10,10,8]]
 #run_params['num_ests'] = [[9,8,6], [8,8,8], [10,8,6], [10,10,8]]
-run_params['num_ests'] = [[6,6,6],[6,6,8],[6,6,10]]
+run_params['num_ests'] = [[5,5,20]] 
 
 
-run_params['num_iter'] = 9 #num of iterations
+run_params['num_iter'] = 10 #num of iterations
 
-run_params['max_size'] = 2 #max size in GB, footprint is ~3 times larger
+run_params['max_size'] = 1.5 #max size in GB, footprint is ~3 times larger

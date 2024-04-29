@@ -12,6 +12,7 @@ from weight_discovery_oneshot import *
 from free_diffusion import *
 from oneshot_running_parameters import run_params as rp
 
+from time import sleep
 
 init_params = rp['init_params']
 params['init'] = init_params
@@ -50,12 +51,13 @@ for num_paths in num_paths_list:
         mus = []
         print(f'rank {rank} run starting {num_est} estimators')
         sys.stdout.flush()
+        sleep(10*max_size*rank)
         for i in range(batch_size):
             process = simulate_free_diffusion_underdamped(params, save_skip=skip)
 
             print(f'rank {rank} got process for run {i} ')
             sys.stdout.flush()
-
+            
             if max_size is not None:
                 total_gbytes = np.prod(process.shape[:-1])*np.prod(num_est)*8/(10**9)
                 n_chunks = ceil(total_gbytes / max_size)
