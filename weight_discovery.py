@@ -40,6 +40,36 @@ def gaussian_basis_function(process, time_step, num_estimators, kernel_params=No
     kernel_value = np.exp(-(momentum - mean_p)**2/(2 * std_dev_p**2)-(position - mean_x)**2/(2 * std_dev_x**2))
     return(kernel_value)
 
+
+def gaussian_periodic_basis_function(process, time_step, num_estimators, kernel_params=None, cyclic_lims=None, **kwargs):
+    if kernel_params is None:
+        means, std_devs = get_kernel_params(process, time_step, num_estimators, **kwargs)
+    else:
+        means, std_devs = kernel_params
+    
+    means = means.T
+
+    if cyclic_lims:
+        domain = np.diff(np.asarray(cyclic_lims))
+        num_periodic = int(np.ceil((num_estimators/2)))
+        means = [np.linspace(1,num_periodic,num_periodic), means[1,:]]
+        kernel_value = np.empty((process.shape[0],2*num_periodic, num_estimators))
+        
+
+    mean_x, mean_p = np.meshgrid(*means)
+    std_dev_x, std_dev_p = std_devs
+    
+    position = process[:,time_step,0][:,None,None]
+    momentum = process[:,time_step,1][:,None,None]
+
+    if cyclic_lims:
+        kernel_value[...,:num_periodic] = np.exp(-(momentum - mean_p)**2/(2 * std_dev_p**2))*(.501+.5*np.sin(mean_x*position*2*np.pi/domain))
+        kernel_value[...,:num_periodic] = np.exp(-(momentum - mean_p)**2/(2 * std_dev_p**2))*(.501+.5*np.cos(mean_x*position*2*np.pi/domain))
+        return kernel_value
+
+    kernel_value = np.exp(-(momentum - mean_p)**2/(2 * std_dev_p**2)-(position - mean_x)**2/(2 * std_dev_x**2))
+    return(kernel_value)
+
 #
 def gaussian_basis_mu_vector(process, index, num_estimators, gamma, kernels=None, cyclic_lims=None, **kwargs):
     
@@ -92,6 +122,20 @@ def gaussian_basis_Xi_matrix(process, index, num_estimators, dt, kernel_value=No
     return Xi_matrix / N
 
 
+def get_step_epr_periodic(process, index, dt, gamma, num_est, return_mats = False, kernel_params=None, **kwargs):
+
+    kernel = gaussian_periodic_basis_function(process, index, num_est, kernel_params= kernel_params, **kwargs)
+    next_kernel = gaussian_periodic_basis_function(process, index+1, num_est, kernel_params= kernel_params, **kwargs)
+
+    mu = gaussian_basis_mu_vector(process, index, num_est, gamma, kernels=[kernel, next_kernel], **kwargs)
+    Xi = gaussian_basis_Xi_matrix(process, index, num_est, dt, kernel_value=kernel, **kwargs)
+    
+    if return_mats:
+        return mu, Xi
+    
+    ep = mu@np.linalg.inv(Xi)@mu
+    return ep/dt
+
 
 def get_step_epr(process, index, dt, gamma, num_est, return_mats = False, kernel_params=None, **kwargs):
 
@@ -106,4 +150,30 @@ def get_step_epr(process, index, dt, gamma, num_est, return_mats = False, kernel
     
     ep = mu@np.linalg.inv(Xi)@mu
     return ep/dt
+
+def add_regularizer(data_dict, dt, alpha_gen = .01, verbose=False):
+    output = []
+    reg_Xis = []
+    for item,m in zip(data_dict['Xis'], data_dict['mus']):
+
+        try:        alpha = alpha_gen(item)
+        except:     alpha = alpha_gen
+
+        X = item + alpha*np.identity( len(item))
+
+        reg_Xis.append(X)
+        output.append(m @ np.linalg.inv(X) @ m / dt)
+
+    data_dict['reg_Xis'] = reg_Xis
+    data_dict['reg_data'] = output
+    if verbose:
+        om, nm = np.mean(data_dict['data']), np.mean(output)
+        os, ns = 3*np.std(data_dict['data'])/np.sqrt(len(output)), 3*np.std(output)/np.sqrt(len(output))
+        print(f'mean, var changed from {om:.4f},{os:.6f} to {nm:.4f},{ns:.6f}')
+    return
+    
+
+    
+
+
 
